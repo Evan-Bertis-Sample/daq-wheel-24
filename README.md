@@ -1,3 +1,3 @@
-# daq-wireless-24
+# daq-wheel-24
 
 **Checkout some learning resources [here!](./RESOURCES.md)**
