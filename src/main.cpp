@@ -2,12 +2,45 @@
 #include <Wire.h>
 #include "speedSensor.h"
 #include "tempSensor.h"
+#include "esp_can.h"
+
+ESPCAN can_bus{};
+
+VirtualTimerGroup timer_group{};
+
+MakeSignedCANSignal(float, 0, 16, 0.01, 0) temp_tx_signal{}; // change factor by number of decimals
+MakeSignedCANSignal(float, 16, 32, 0.01, 0) speed_tx_signal{};
+
+CANTXMessage<2>
+    temp_tx_message{can_bus, 0x410, 4, 100, timer_group, temp_tx_signal};
+
+CANTXMessage<2>
+    speed_tx_message{can_bus, 0x411, 4, 100, timer_group, speed_tx_signal};
+
+bool DEBUG_MODE = false;
+
+void one_sec_task()
+{
+    float objectTemp = (*tempSensor).Read();
+    float RPS = speedSensor.Read();
+
+    temp_tx_signal=objectTemp;
+    speed_tx_signal=RPS;
+
+    if (DEBUG_MODE)
+    {
+        Serial.print("Object Temp: ");
+        Serial.println(objectTemp);
+        Serial.print("RPS: ");
+        Serial.println(RPS);
+    }
+
+    can_bus.Tick();
+}
 
 int hallSensorPin = 36;
-
 SpeedSensor speedSensor(hallSensorPin);
-
-TempSensor* tempSensor = nullptr;
+TempSensor *tempSensor = nullptr;
 
 void i2cScan()
 {
@@ -56,21 +89,14 @@ void IRAM_ATTR handleInterrupt()
 
 void setup()
 {
+    can_bus.Initialize(ICAN::BaudRate::kBaud1M);
+    timer_group.AddTimer(1000, one_sec_task);
+
     Serial.begin(115200);
     Wire.begin();
     i2cScan();
-    tempSensor=new TempSensor();
     
-    attachInterrupt(digitalPinToInterrupt(hallSensorPin), handleInterrupt, FALLING);
-}
+    tempSensor = new TempSensor();
 
-void loop()
-{
-    float objectTemp = (*tempSensor).Read();
-    float RPS = speedSensor.Read();
-    Serial.print("Object Temp: ");
-    Serial.println(objectTemp);
-    Serial.print("RPS: ");
-    Serial.println(RPS);
-    delay(1000);
+    attachInterrupt(digitalPinToInterrupt(hallSensorPin), handleInterrupt, FALLING);
 }

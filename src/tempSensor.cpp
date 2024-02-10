@@ -88,7 +88,7 @@ TempSensor::TempSensor(){
 float TempSensor::Read()
 {
     Tamb = getTPAMB();
-    float temp_amb = ((25 + 273.15f) + ((float)Tamb - (float)PTAT_25) * (1 / (float)M));
+    float temp_amb = (25 + ((float)Tamb - (float)PTAT_25) * (1 / (float)M));
 
     Tobj = getTPOBJ();
     float temp0 = powf(temp_amb, 3.8f);

@@ -6,7 +6,6 @@ void IRAM_ATTR SpeedSensor::Interrupt(){
 
 }
 float SpeedSensor::Read(){
-    
     unsigned long readTime = millis();
     float timeSinceLastRead = (float)(readTime - this->lastReadTime) / 1000;
     this->lastReadTime = readTime;
@@ -14,7 +13,7 @@ float SpeedSensor::Read(){
     if (timeSinceLastRead < 10e-5)
         return this->lastRead;
 
-    float RPS = this->teethCount / timeSinceLastRead / NUM_GEAR_TEETH;
+    float RPS = this->teethCount / timeSinceLastRead / NUM_GEAR_TEETH * 2 * PI; //Radians/s
 
     // Reset state
     this->lastRead = RPS;
