@@ -15,7 +15,6 @@
 // Calipile Address
 #define CALIPILE_ADDRESS 0x0C
 
-
 class TempSensor
 {
     public:
@@ -28,5 +27,4 @@ class TempSensor
         // Reads the value of the temperature sensor, and returns in Kelvin
         //
         float Read();
-        
 };

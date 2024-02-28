@@ -4,6 +4,7 @@
 #include "tempSensor.h"
 #include "esp_can.h"
 
+
 ESPCAN can_bus{};
 
 VirtualTimerGroup timer_group{};
@@ -12,35 +13,17 @@ MakeSignedCANSignal(float, 0, 16, 0.01, 0) temp_tx_signal{}; // change factor by
 MakeSignedCANSignal(float, 16, 32, 0.01, 0) speed_tx_signal{};
 
 CANTXMessage<2>
-    temp_tx_message{can_bus, 0x410, 4, 100, timer_group, temp_tx_signal};
-
-CANTXMessage<2>
-    speed_tx_message{can_bus, 0x411, 4, 100, timer_group, speed_tx_signal};
+    wheel_tx_message{can_bus, 0x410, 4, 100, timer_group, temp_tx_signal, speed_tx_signal};
 
 bool DEBUG_MODE = false;
 
-void one_sec_task()
-{
-    float objectTemp = (*tempSensor).Read();
-    float RPS = speedSensor.Read();
-
-    temp_tx_signal=objectTemp;
-    speed_tx_signal=RPS;
-
-    if (DEBUG_MODE)
-    {
-        Serial.print("Object Temp: ");
-        Serial.println(objectTemp);
-        Serial.print("RPS: ");
-        Serial.println(RPS);
-    }
-
-    can_bus.Tick();
-}
-
+// Sensor DEFS
 int hallSensorPin = 36;
 SpeedSensor speedSensor(hallSensorPin);
 TempSensor *tempSensor = nullptr;
+
+
+
 
 void i2cScan()
 {
@@ -85,6 +68,25 @@ void i2cScan()
 void IRAM_ATTR handleInterrupt()
 {
     speedSensor.Interrupt();
+}
+
+void one_sec_task()
+{
+    float objectTemp = (*tempSensor).Read();
+    float RPS = speedSensor.Read();
+
+    temp_tx_signal=objectTemp;
+    speed_tx_signal=RPS;
+
+    if (DEBUG_MODE)
+    {
+        Serial.print("Object Temp: ");
+        Serial.println(objectTemp);
+        Serial.print("RPS: ");
+        Serial.println(RPS);
+    }
+
+    can_bus.Tick();
 }
 
 void setup()
