@@ -4,25 +4,32 @@
 #include "tempSensor.h"
 #include "esp_can.h"
 
-
-ESPCAN can_bus{};
+ESPCAN can_bus{10, GPIO_NUM_32, GPIO_NUM_27};
 
 VirtualTimerGroup timer_group{};
 
-MakeSignedCANSignal(float, 0, 16, 0.01, 0) temp_tx_signal{}; // change factor by number of decimals
-MakeSignedCANSignal(float, 16, 32, 0.01, 0) speed_tx_signal{};
+MakeSignedCANSignal(float, 0, 16, 0.01, 0) temp_tx_signal_1{};
+// MakeSignedCANSignal(float, 16, 16, 0.01, 0) temp_tx_signal_2{};
+// MakeSignedCANSignal(float, 32, 16, 0.01, 0) temp_tx_signal_3{};
+// MakeSignedCANSignal(float, 48, 16, 0.01, 0) temp_tx_signal_4{};
+
+MakeSignedCANSignal(float, 16, 16, 0.01, 0) speed_tx_signal_1{};
+// MakeSignedCANSignal(float, 64, 16, 0.01, 0) speed_tx_signal_1{};
+// MakeSignedCANSignal(float, 80, 16, 0.01, 0) speed_tx_signal_2{};
+
 
 CANTXMessage<2>
-    wheel_tx_message{can_bus, 0x410, 4, 100, timer_group, temp_tx_signal, speed_tx_signal};
+    wheel_tx_message{can_bus, 0x410, 4, 100, timer_group, temp_tx_signal_1, speed_tx_signal_1};
 
-bool DEBUG_MODE = false;
+bool DEBUG_MODE = true;
 
 // Sensor DEFS
-int hallSensorPin = 36;
-SpeedSensor speedSensor(hallSensorPin);
-TempSensor *tempSensor = nullptr;
+int hallSensor1Pin = 23;
+int hallSensor2Pin = 0; //CHANGE
+SpeedSensor speedSensor1(hallSensor1Pin);
+SpeedSensor speedSensor2(hallSensor2Pin);
 
-
+TempSensor *tempSensor1, *tempSensor2, *tempSensor3, *tempSensor4 = nullptr;
 
 
 void i2cScan()
@@ -42,7 +49,7 @@ void i2cScan()
         Wire.beginTransmission(address);
         error = Wire.endTransmission();
         if (error == 0)
-        {
+        {   
             Serial.print("I2C device found at address 0x");
             if (address < 16)
                 Serial.print("0");
@@ -67,23 +74,51 @@ void i2cScan()
 // Workaround
 void IRAM_ATTR handleInterrupt()
 {
-    speedSensor.Interrupt();
+    if(DEBUG_MODE){
+        Serial.println("Gear tooth 1!");
+    }
+    speedSensor1.Interrupt();
+}
+void IRAM_ATTR handleInterrupt2()
+{
+    if(DEBUG_MODE){
+        Serial.println("Gear tooth 2!");
+    }
+    speedSensor2.Interrupt();
 }
 
 void one_sec_task()
 {
-    float objectTemp = (*tempSensor).Read();
-    float RPS = speedSensor.Read();
+    float wheelTemp1 = tempSensor1->Read();
+    float wheelTemp2 = tempSensor2->Read();
+    float wheelTemp3 = tempSensor3->Read();
+    float wheelTemp4 = tempSensor4->Read();
+    float RPS1 = speedSensor1.Read();
+    float RPS2 = speedSensor2.Read();
 
-    temp_tx_signal=objectTemp;
-    speed_tx_signal=RPS;
+    temp_tx_signal_1 = wheelTemp1;
+    // temp_tx_signal_2 = wheelTemp2;
+    // temp_tx_signal_3 = wheelTemp3;
+    // temp_tx_signal_4 = wheelTemp4;
+
+    speed_tx_signal_1 = RPS1;
+    //speed_tx_signal_2 = RPS1;
 
     if (DEBUG_MODE)
     {
-        Serial.print("Object Temp: ");
-        Serial.println(objectTemp);
-        Serial.print("RPS: ");
-        Serial.println(RPS);
+        Serial.print("Wheel Temp 1: ");
+        Serial.println(wheelTemp1);
+        Serial.print("Wheel Temp 2: ");
+        Serial.println(wheelTemp2);
+        Serial.print("Wheel Temp 3: ");
+        Serial.println(wheelTemp3);
+        Serial.print("Wheel Temp 4: ");
+        Serial.println(wheelTemp4);
+
+        Serial.print("RPS 1: ");
+        Serial.println(RPS1);
+        Serial.print("RPS 2: ");
+        Serial.println(RPS2);
     }
 
     can_bus.Tick();
@@ -91,14 +126,33 @@ void one_sec_task()
 
 void setup()
 {
+
+    Serial.begin(115200);
+
+    // Wire.begin(19,18);
+    // Wire1.begin(25,26);
+
+    //i2cScan();
+
+    tempSensor1 = new TempSensor(0x0C, Wire);
+    tempSensor2 = new TempSensor(0x1C, Wire);
+    tempSensor3 = new TempSensor(0x0C, Wire1);
+    tempSensor4 = new TempSensor(0x1C, Wire1);
+
     can_bus.Initialize(ICAN::BaudRate::kBaud1M);
     timer_group.AddTimer(1000, one_sec_task);
 
-    Serial.begin(115200);
-    Wire.begin();
-    i2cScan();
-    
-    tempSensor = new TempSensor();
-
-    attachInterrupt(digitalPinToInterrupt(hallSensorPin), handleInterrupt, FALLING);
+    attachInterrupt(digitalPinToInterrupt(hallSensor1Pin), handleInterrupt, FALLING);
+    attachInterrupt(digitalPinToInterrupt(hallSensor2Pin), handleInterrupt2, FALLING);
 }
+
+void loop(){
+    timer_group.Tick(millis());
+}
+// DELETE
+// Debugging object temp
+// void loop(){
+//     float objectTemp = tempSensor1->Read();
+//     Serial.println(objectTemp);
+//     delay(1000);
+// }
