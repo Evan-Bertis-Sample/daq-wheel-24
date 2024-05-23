@@ -9,17 +9,28 @@ ESPCAN can_bus{10, GPIO_NUM_32, GPIO_NUM_27};
 VirtualTimerGroup timer_group{};
 
 MakeSignedCANSignal(float, 0, 16, 0.01, 0) temp_tx_signal_1{};
-// MakeSignedCANSignal(float, 16, 16, 0.01, 0) temp_tx_signal_2{};
-// MakeSignedCANSignal(float, 32, 16, 0.01, 0) temp_tx_signal_3{};
-// MakeSignedCANSignal(float, 48, 16, 0.01, 0) temp_tx_signal_4{};
+MakeSignedCANSignal(float, 16, 16, 0.01, 0) temp_tx_signal_2{};
+MakeSignedCANSignal(float, 32, 16, 0.01, 0) temp_tx_signal_3{};
+MakeSignedCANSignal(float, 48, 16, 0.01, 0) temp_tx_signal_4{};
 
-MakeSignedCANSignal(float, 16, 16, 0.01, 0) speed_tx_signal_1{};
-// MakeSignedCANSignal(float, 64, 16, 0.01, 0) speed_tx_signal_1{};
-// MakeSignedCANSignal(float, 80, 16, 0.01, 0) speed_tx_signal_2{};
+MakeSignedCANSignal(float, 0, 16, 0.01, 0) speed_tx_signal_1{};
+MakeSignedCANSignal(float, 16, 16, 0.01, 0) speed_tx_signal_2{};
 
 
-CANTXMessage<2>
-    wheel_tx_message{can_bus, 0x410, 4, 100, timer_group, temp_tx_signal_1, speed_tx_signal_1};
+//Board #1
+CANTXMessage<4>
+    temp_tx_message{can_bus, 0x410, 4, 100, timer_group, temp_tx_signal_1, temp_tx_signal_2, temp_tx_signal_3, temp_tx_signal_4 };
+
+
+CANTXMessage<4>
+    speed_tx_message{can_bus, 0x411, 4, 100, timer_group, speed_tx_signal_1, speed_tx_signal_2 };
+
+// Board #2
+// CANTXMessage<4>
+//     temp_tx_message{can_bus, 0x412, 4, 100, timer_group, temp_tx_signal_1, temp_tx_signal_2, temp_tx_signal_3, temp_tx_signal_4 };
+
+// ONLY PUT SPEED FOR BOARD 1
+
 
 bool DEBUG_MODE = true;
 
@@ -41,7 +52,7 @@ void i2cScan()
     Serial.println("Scanning...");
 
     nDevices = 0;
-    for (address = 1; address < 127; address++)
+    for (address = 0; address < 255; address++)
     {
         // The i2c_scanner uses the return value of
         // the Write.endTransmission to see if
@@ -97,12 +108,13 @@ void one_sec_task()
     float RPS2 = speedSensor2.Read();
 
     temp_tx_signal_1 = wheelTemp1;
-    // temp_tx_signal_2 = wheelTemp2;
-    // temp_tx_signal_3 = wheelTemp3;
-    // temp_tx_signal_4 = wheelTemp4;
+    temp_tx_signal_2 = wheelTemp2;
+    temp_tx_signal_3 = wheelTemp3;
+    temp_tx_signal_4 = wheelTemp4;
 
+    
     speed_tx_signal_1 = RPS1;
-    //speed_tx_signal_2 = RPS1;
+    speed_tx_signal_2 = RPS2;
 
     if (DEBUG_MODE)
     {
@@ -129,15 +141,16 @@ void setup()
 
     Serial.begin(115200);
 
-    // Wire.begin(19,18);
-    // Wire1.begin(25,26);
+    Wire1.begin(19,18);
+    Wire.begin(25,26);
 
-    //i2cScan();
+
+    i2cScan();
 
     tempSensor1 = new TempSensor(0x0C, Wire);
-    tempSensor2 = new TempSensor(0x1C, Wire);
+    tempSensor2 = new TempSensor(0x0E, Wire);
     tempSensor3 = new TempSensor(0x0C, Wire1);
-    tempSensor4 = new TempSensor(0x1C, Wire1);
+    tempSensor4 = new TempSensor(0x0E, Wire1);
 
     can_bus.Initialize(ICAN::BaudRate::kBaud1M);
     timer_group.AddTimer(1000, one_sec_task);
@@ -149,10 +162,3 @@ void setup()
 void loop(){
     timer_group.Tick(millis());
 }
-// DELETE
-// Debugging object temp
-// void loop(){
-//     float objectTemp = tempSensor1->Read();
-//     Serial.println(objectTemp);
-//     delay(1000);
-// }

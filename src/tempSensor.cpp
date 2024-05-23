@@ -1,9 +1,6 @@
 #include <Arduino.h>
 #include <tempSensor.h>
 
-
-
-
 void TempSensor::readBytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_t *dest)
 {
     I2C->beginTransmission(address); // Initialize the Tx buffer
@@ -48,6 +45,7 @@ void TempSensor::readEEPROM()
 
     writeByte(slave_address, CALIPILE_EEPROM_CONTROL, 0x00);
 
+
     k = ((float)(Uout1 - U0)) / (powf((float)(Tobj1 + 273.15f), 3.8f) - powf(25.0f + 273.15f, 3.8f));
 }
 void TempSensor::wake()
@@ -74,21 +72,21 @@ uint32_t TempSensor::getTPOBJ()
 TempSensor::TempSensor(uint8_t address, TwoWire &bus){
     I2C = &bus;
     slave_address = address;
-    // wake();
-    // readEEPROM();
+    wake();
+    readEEPROM();
 }
 
 float TempSensor::Read()
 {
-    return 1.00;
 
     uint16_t Tamb = getTPAMB();
-    float temp_amb = (25 + ((float)Tamb - (float)PTAT_25) * (1 / (float)M));
-
+    float temp_amb = ((25 + 273.15f) + ((float)Tamb - (float)PTAT_25) * (1 / (float)M));
     uint32_t Tobj = getTPOBJ();
     float temp0 = powf(temp_amb, 3.8f);
     float temp1 = (((float) Tobj) - ((float)U0)) / k;
+    
     float temp_object = powf((temp0 + temp1), 0.2631578947f);
 
-    return temp_object;
+    float temp_object_celcius = temp_object- 273.15f;
+    return temp_object_celcius;
 }

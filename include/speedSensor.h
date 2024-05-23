@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#define NUM_GEAR_TEETH 15
+#define NUM_GEAR_TEETH 72
 
 class SpeedSensor
 {
